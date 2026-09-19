@@ -1,0 +1,8 @@
+packages: []
+
+allowBuilds:
+  esbuild: true
+  msw: true
+  unrs-resolver: true
+  "@tailwindcss/oxide": true
+  sharp: true
