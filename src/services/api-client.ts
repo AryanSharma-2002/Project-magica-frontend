@@ -36,12 +36,12 @@ export type QueryParams = Record<string, string | number | boolean | undefined |
 
 export type ApiRequest<S extends z.ZodType> = {
   path: string;
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
-  query?: QueryParams;
+  method?: "GET" | "POST" | "PATCH" | "DELETE" | undefined;
+  query?: QueryParams | undefined;
   body?: unknown;
   schema: S;
-  idempotencyKey?: string;
-  signal?: AbortSignal;
+  idempotencyKey?: string | undefined;
+  signal?: AbortSignal | undefined;
 };
 
 function buildUrl(path: string, query?: QueryParams): string {

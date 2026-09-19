@@ -7,7 +7,7 @@ SRC="${1:-../agent-chat-backend}"
 REF="${2:-}"
 DEST="$ROOT/src/contracts"
 TMP=""
-cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
+cleanup() { if [ -n "$TMP" ]; then rm -rf "$TMP"; fi; }
 trap cleanup EXIT
 
 if [[ "$SRC" == http* || "$SRC" == git@* ]]; then

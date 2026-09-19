@@ -1,6 +1,6 @@
 {
   "source": "agent-chat-backend/packages/contracts/src",
-  "commit": "21a19085dc993f511cefaf8e19375451c2a83a5d",
-  "sha256": "103cb846631e936062e737026957c38a3fc981ede38341d339834e27d2693752",
-  "syncedAt": "2026-09-19T07:33:40Z"
+  "commit": "13e05bb15c2e9f49d69a21c854754da81cb4c213",
+  "sha256": "d1bb82263dca3eb5fbebebca32e6e6d2cda3b6f631523be9a7a9b0ff1f582f50",
+  "syncedAt": "2026-09-19T07:37:04Z"
 }
