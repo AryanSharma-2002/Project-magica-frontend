@@ -1,18 +1,28 @@
 "use client";
-import type { LiveToolState, ToolResultBlock, ToolUseBlock } from "@/contracts";
+import { TOOL_NAMES, type ToolName } from "@/contracts";
+import { CropImageCard } from "./cards/CropImageCard";
+import { GptImage2Card } from "./cards/GptImage2Card";
+import { MergeVideosCard } from "./cards/MergeVideosCard";
+import { SkillCard } from "./cards/SkillCard";
+import { DefaultToolCard } from "./DefaultToolCard";
+import type { ToolCardProps } from "./types";
 
-/**
- * Tool activity card (F2): registry keyed by toolName with a default JSON card.
- * The message block renderer (F1) calls this for every tool_use block, passing the matching tool_result
- * (persisted) and/or live state (realtime metadata) so pending/running/completed/failed/cancelled render distinctly.
- */
-export type ToolCardProps = {
-  toolUse: ToolUseBlock;
-  result: ToolResultBlock | null;
-  live: LiveToolState | null;
-  onOpenAsset?: (url: string) => void;
+export type { ToolCardProps } from "./types";
+
+type ToolCardComponent = (props: ToolCardProps) => React.ReactElement | null;
+
+/** Registry: adding a tool touches only this map (+ one card component). Unknown tool names fall back to DefaultToolCard. */
+export const toolCards: Record<ToolName, ToolCardComponent> = {
+  crop_image: CropImageCard,
+  gpt_image_2: GptImage2Card,
+  merge_videos: MergeVideosCard,
+  load_skill: SkillCard,
+  read_skill_asset: SkillCard,
 };
 
-export function ToolCard({ toolUse }: ToolCardProps) {
-  return <div data-testid="tool-card-placeholder" className="rounded-md border p-3 text-sm">{toolUse.toolName}</div>;
+const KNOWN_TOOL_NAMES: ReadonlySet<string> = new Set(TOOL_NAMES);
+
+export function ToolCard(props: ToolCardProps) {
+  const Card = KNOWN_TOOL_NAMES.has(props.toolUse.toolName) ? toolCards[props.toolUse.toolName as ToolName] : DefaultToolCard;
+  return <Card {...props} />;
 }
