@@ -1,15 +1,5 @@
 import { http, HttpResponse } from "msw";
-import {
-  API_PREFIX,
-  DEFAULT_LIMITS,
-  type AgentRun,
-  type AppConfig,
-  type Chat,
-  type Message,
-  type RealtimeAccess,
-  type SearchHit,
-  type Waitpoint,
-} from "@/contracts";
+import { API_PREFIX, DEFAULT_LIMITS, type AgentRun, type AppConfig, type Chat, type Message, type RealtimeAccess, type SearchHit, type Waitpoint, type GetRunResponse } from "@/contracts";
 
 /**
  * Contract-derived MSW handlers. Fixtures are typed with the vendored contracts so a contract
@@ -46,7 +36,8 @@ export const fixtures = {
     updatedAt: "2026-09-19T00:00:00.000Z",
     ...over,
   }),
-  run: (over: Partial<AgentRun> = {}): AgentRun => ({
+  run: (over: Partial<GetRunResponse> = {}): GetRunResponse => ({
+    realtime: null,
     id: "run_1",
     chatId: "chat_1",
     userMessageId: "msg_user_1",
