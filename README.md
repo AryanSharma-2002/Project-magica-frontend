@@ -21,3 +21,22 @@ pnpm test:e2e                     # Playwright (needs backend + Clerk test user)
 
 ## Deploy
 Vercel. Set `NEXT_PUBLIC_API_URL`, Clerk keys. The backend must allow this origin (`FRONTEND_ORIGIN`).
+
+## Architecture overview
+
+Services (`src/services`) are the only fetch boundary and parse every response with the vendored Zod contracts. TanStack Query owns server state (infinite, cursor-based chats and messages; optimistic send with idempotency keys). Zustand holds small UI caches. During an active run the assistant bubble renders from the live view (Trigger.dev run metadata plus the `agent-text` stream, ordered by block index); when the run finishes the persisted message replaces it, so there is never a duplicate terminal bubble. Realtime failures degrade to bounded reconnects, token refresh and REST polling. Rendering is registry-driven: block type → renderer, tool name → card, waitpoint type → overlay.
+
+## Design decisions and trade-offs
+
+- **Vendored contracts with a lock file** instead of a shared npm package: works on Vercel and a fresh clone with no registry auth; `pnpm contracts:check` in CI stops hand edits.
+- **Live view vs persisted view as an explicit switch** rather than merging streams into the cache: simpler invariants, no duplicate bubbles, replay from index 0 is idempotent.
+- **Prop-driven seams** (`Composer`, `WaitpointOverlay`, `ToolCard`, `ArtifactPanel`) so the composer/uploads/overlays evolve independently of page composition.
+- **Backend-owned limits** read from `GET /config`: the client never hardcodes message or upload limits.
+- **`exactOptionalPropertyTypes` off** on the frontend only: it conflicts with Radix/shadcn prop types and would force casts.
+
+## What I'd improve with more time
+
+- Pixel pass against the reference product with side-by-side screenshots (tokens are isolated in `globals.css` for this).
+- Persist the composer draft and pending uploads to IndexedDB so a reload mid-upload can resume via tus.
+- Prefetch the next page of messages on scroll intent and virtualize the sidebar list.
+- Playwright coverage for reload recovery and reconnect using a stubbed realtime transport.
