@@ -177,6 +177,16 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
 
       let assemblyId: string | null = null;
 
+      /** Ends the whole batch as failed (assembly-level rejection, or nothing left to upload). */
+      const failBatch = (message: string) => {
+        const ids = new Set(metas.map((m) => m.clientId));
+        setAttachments(chatKey, (prev) =>
+          prev.map((a) => (ids.has(a.clientId) && IN_FLIGHT_ATTACHMENT_STATUSES.has(a.status) ? { ...a, status: "failed", error: message } : a)),
+        );
+        for (const meta of metas) if (uppyByClientId.get(meta.clientId) === uppy) uppyByClientId.delete(meta.clientId);
+        uppy.destroy();
+      };
+
       uppy.on("upload-progress", (file, progress) => {
         if (!file) return;
         const total = progress.bytesTotal ?? 0;
@@ -198,6 +208,13 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         assemblyId = (assembly as { assembly_id?: string }).assembly_id ?? assemblyId;
       });
 
+      // Assembly-level rejection (bad signature, expired params, plan/size limits — see
+      // AssemblyStatusErrCode in @transloadit/types). Per-file `upload-error` isn't guaranteed to
+      // fire for these, so without this handler the whole batch is stuck "uploading" forever.
+      uppy.on("transloadit:assembly-error", (_assembly, error) => {
+        failBatch(error.message || "The upload service rejected the request.");
+      });
+
       uppy.use(Transloadit, {
         assemblyOptions: response.assemblyOptions,
         waitForEncoding: false,
@@ -205,18 +222,31 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         retryDelays: [0, 1000, 3000, 5000],
       });
 
+      let addedCount = 0;
       for (let i = 0; i < metas.length; i += 1) {
         const meta = metas[i];
         const file = files[i];
         if (!meta || !file) continue;
         filesByClientId.set(meta.clientId, file);
-        // NOTE: Uppy's `addFile` ignores any caller-supplied `id` (`#transformFile` always calls
-        // `getSafeFileId`, which regenerates one from name/type/size — verified in
-        // @uppy/core/lib/utils/generateFileID.js). The returned id is the *real* one; `meta` (unlike
-        // `id`) is preserved verbatim, so events are correlated by `file.meta.clientId`, and this
-        // returned id is kept only for `removeFile`/`retryUpload`.
-        const uppyFileId = uppy.addFile({ name: file.name, type: file.type, data: file, meta: { clientId: meta.clientId } });
-        uppyFileIdByClientId.set(meta.clientId, uppyFileId);
+        try {
+          // NOTE: Uppy's `addFile` ignores any caller-supplied `id` (`#transformFile` always calls
+          // `getSafeFileId`, which regenerates one from name/type/size/lastModified — verified in
+          // @uppy/core/lib/utils/generateFileID.js). The returned id is the *real* one; `meta`
+          // (unlike `id`) is preserved verbatim, so events are correlated by `file.meta.clientId`,
+          // and this returned id is kept only for `removeFile`/`retryUpload`. `addFile` also throws
+          // synchronously on a duplicate id (e.g. the same file picked twice in one batch) — caught
+          // per-file so one bad file doesn't sink the rest of the batch.
+          const uppyFileId = uppy.addFile({ name: file.name, type: file.type, data: file, meta: { clientId: meta.clientId } });
+          uppyFileIdByClientId.set(meta.clientId, uppyFileId);
+          addedCount += 1;
+        } catch (err) {
+          updateAttachment(chatKey, meta.clientId, { status: "failed", error: err instanceof Error ? err.message : "Couldn't queue this file." });
+        }
+      }
+      if (addedCount === 0) {
+        for (const meta of metas) if (uppyByClientId.get(meta.clientId) === uppy) uppyByClientId.delete(meta.clientId);
+        uppy.destroy();
+        return;
       }
 
       uppy.on("complete", (result) => {
@@ -231,12 +261,17 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
                 return uploadUrl ? { attachmentId: match.id, uploadUrl } : { attachmentId: match.id };
               })
               .filter((v): v is { attachmentId: string; uploadUrl?: string } => v !== null);
-            if (filesPayload.length > 0 && assemblyId) {
-              try {
-                await attachmentsService.uploaded({ assemblyId, files: filesPayload });
-              } catch {
-                // The assembly still completed on Transloadit's side; keep polling — the server
-                // reconciles from the notify webhook independently of this best-effort call.
+            if (filesPayload.length > 0) {
+              // `uploaded` is a best-effort completion signal; the server's source of truth is the
+              // Transloadit notify webhook, which fires (and flips the attachment to ready/failed)
+              // independently of whether this call succeeds or `assemblyId` was ever captured — so
+              // polling must run either way, not only when this call was attempted.
+              if (assemblyId) {
+                try {
+                  await attachmentsService.uploaded({ assemblyId, files: filesPayload });
+                } catch {
+                  // best-effort; see comment above
+                }
               }
               void pollForReady(
                 chatKey,
@@ -254,7 +289,9 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         })();
       });
 
-      uppy.upload();
+      void uppy.upload().catch((err: unknown) => {
+        failBatch(err instanceof Error ? err.message : "Upload failed to start.");
+      });
     },
     [chatId, chatKey, limits.allowedMimeTypes, limits.maxFileBytes, setAttachments, updateAttachment],
   );

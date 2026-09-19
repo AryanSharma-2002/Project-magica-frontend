@@ -266,4 +266,23 @@ describe("useUploader", () => {
     expect(byPosition.map((a) => a.filename)).toEqual(["a.png", "b.png"]);
     expect(byPosition.every((a) => a.status === "processing")).toBe(true);
   });
+
+  it("fails the whole batch when the assembly itself is rejected (bad signature, expired, over plan limits)", async () => {
+    mockCreateAssembly();
+    const { result } = renderHook(() => useUploader(null, DEFAULT_LIMITS));
+
+    await act(async () => {
+      await result.current.addFiles([makeFile("a.png", "image/png", 10), makeFile("b.png", "image/png", 10)]);
+    });
+    const uppy = latestUppy();
+
+    act(() => {
+      uppy.emit("transloadit:assembly-error", {}, new Error("INVALID_SIGNATURE"));
+    });
+
+    expect(result.current.attachments.every((a) => a.status === "failed" && a.error === "INVALID_SIGNATURE")).toBe(true);
+    expect(uppy.destroy).toHaveBeenCalled();
+    // Never got a real upload id, so cancel/retry must not throw trying to look one up.
+    expect(() => result.current.cancelFile(result.current.attachments[0]?.clientId ?? "")).not.toThrow();
+  });
 });
