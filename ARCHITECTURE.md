@@ -10,7 +10,8 @@ The canonical design lives in the backend repo: **agent-chat-backend/ARCHITECTUR
 5. Realtime is transport. While a run is active the assistant bubble renders from the live view (Trigger metadata + `agent-text` stream, ordered by block `index`); on terminal status it renders persisted content from `GET /chats/:id/messages`. Reconnect is bounded (3 tries + token refresh), then REST polling.
 6. Zustand stores are small caches (`ui`, `composer`, `runs`); the server is the source of truth (`Chat.activeRunId`, `GET /runs/:id`).
 7. Design tokens live in `src/app/globals.css`; components use tokens/shadcn primitives so the fidelity pass against app.magica.com is a token/spacing change, not a rewrite.
-8. Accessibility is required: focus management in overlays, `aria-live` for streaming, keyboard shortcuts (Enter send, Shift+Enter newline, Esc stop/close, ⌘K search), labelled controls, visible retry paths on failed turns.
+8. TypeScript: `strict` + `noUncheckedIndexedAccess`. `exactOptionalPropertyTypes` is intentionally OFF here (it is ON in the backend): it conflicts with Radix/shadcn prop types.
+9. Accessibility is required: focus management in overlays, `aria-live` for streaming, keyboard shortcuts (Enter send, Shift+Enter newline, Esc stop/close, ⌘K search), labelled controls, visible retry paths on failed turns.
 
 ## Layout
 ```
