@@ -15,9 +15,17 @@ type MockUppyFile = {
   uploadURL?: string;
   response?: { uploadURL?: string };
 };
+type MockUppyFileInput = Omit<MockUppyFile, "id">;
 
+/**
+ * Real Uppy ignores any caller-supplied `id` on `addFile` and always regenerates one via
+ * `getSafeFileId` (verified in @uppy/core/lib/utils/generateFileID.js) — `meta` survives untouched,
+ * `id` does not. This mock reproduces that: it manufactures its own id and hands it back from
+ * `addFile`, so a test that (incorrectly) assumed `id === clientId` would fail honestly.
+ */
 class MockUppy {
   static instances: MockUppy[] = [];
+  static nextFileSeq = 0;
   handlers = new Map<string, Handler[]>();
   files = new Map<string, MockUppyFile>();
   pluginOpts: unknown;
@@ -43,9 +51,15 @@ class MockUppy {
     this.pluginOpts = opts;
     return this;
   }
-  addFile(file: MockUppyFile) {
-    this.files.set(file.id, file);
-    return file.id;
+  addFile(file: MockUppyFileInput) {
+    MockUppy.nextFileSeq += 1;
+    const id = `uppy-generated-id-${MockUppy.nextFileSeq}`;
+    this.files.set(id, { ...file, id });
+    return id;
+  }
+  /** Test helper: production code correlates events by `meta.clientId`, never by the real id. */
+  fileByClientId(clientId: string): MockUppyFile | undefined {
+    return Array.from(this.files.values()).find((f) => f.meta.clientId === clientId);
   }
 }
 
@@ -174,7 +188,7 @@ describe("useUploader", () => {
     const clientId = result.current.attachments[0]?.clientId;
     if (!clientId) throw new Error("expected a pending attachment");
     const uppy = latestUppy();
-    const uppyFile = uppy.files.get(clientId);
+    const uppyFile = uppy.fileByClientId(clientId);
     if (!uppyFile) throw new Error("expected uppy to have the file");
 
     act(() => {
@@ -185,7 +199,11 @@ describe("useUploader", () => {
     act(() => {
       result.current.cancelFile(clientId);
     });
-    expect(uppy.removeFile).toHaveBeenCalledWith(clientId);
+    // Uppy regenerates its own file id (never the clientId — see the MockUppy doc comment above),
+    // so cancelFile must remove by that real id, not by clientId, or the removal is a silent no-op.
+    expect(uppyFile.id).not.toBe(clientId);
+    expect(uppy.removeFile).toHaveBeenCalledWith(uppyFile.id);
+    expect(uppy.removeFile).not.toHaveBeenCalledWith(clientId);
     expect(result.current.attachments.find((a) => a.clientId === clientId)?.status).toBe("cancelled");
   });
 
@@ -201,7 +219,7 @@ describe("useUploader", () => {
     if (!attachment?.clientId || !attachment.attachmentId) throw new Error("expected an uploading attachment");
     const { clientId, attachmentId } = attachment;
     const uppy = latestUppy();
-    const uppyFile = uppy.files.get(clientId);
+    const uppyFile = uppy.fileByClientId(clientId);
     if (!uppyFile) throw new Error("expected uppy to have the file");
     const successFile = { ...uppyFile, uploadURL: "https://transloadit.example/up1" };
 
@@ -234,8 +252,8 @@ describe("useUploader", () => {
     const [first, second] = result.current.attachments;
     if (!first || !second) throw new Error("expected two pending attachments");
     const uppy = latestUppy();
-    const fileA = uppy.files.get(first.clientId);
-    const fileB = uppy.files.get(second.clientId);
+    const fileA = uppy.fileByClientId(first.clientId);
+    const fileB = uppy.fileByClientId(second.clientId);
     if (!fileA || !fileB) throw new Error("expected uppy to have both files");
 
     // B finishes before A.

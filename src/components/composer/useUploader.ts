@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Uppy as UppyInstanceType } from "@uppy/core";
 import type { Attachment, AppLimits, CreateAssemblyRequest } from "@/contracts";
 
@@ -24,6 +24,16 @@ const IN_FLIGHT_ATTACHMENT_STATUSES = new Set<PendingAttachment["status"]>(["que
 
 /** Bounded backoff for polling attachment readiness after the Transloadit upload completes. */
 const POLL_DELAYS_MS = [1000, 1500, 2500, 4000, 6000, 8000, 10000, 15000];
+
+/**
+ * Per-clientId bookkeeping that must survive the owning Composer unmounting (chat switch mid-upload):
+ * the in-memory File (for retry), which Uppy instance currently owns this clientId (for cancel), and
+ * Uppy's *real* internal file id for that upload (see note on `addFile` below). Deliberately
+ * module-level, not component refs — an unmount must not kill an in-flight upload.
+ */
+const filesByClientId = new Map<string, File>();
+const uppyByClientId = new Map<string, UppyInstance>();
+const uppyFileIdByClientId = new Map<string, string>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -126,18 +136,6 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
   const removeAttachmentFromStore = useComposerStore((s) => s.removeAttachment);
 
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
-  const filesRef = useRef(new Map<string, File>());
-  const uppyByClientRef = useRef(new Map<string, UppyInstance>());
-  const allUppyRef = useRef(new Set<UppyInstance>());
-
-  useEffect(
-    () => () => {
-      for (const uppy of allUppyRef.current) uppy.destroy();
-      allUppyRef.current.clear();
-      uppyByClientRef.current.clear();
-    },
-    [],
-  );
 
   const dismissIssues = useCallback(() => setIssues([]), []);
 
@@ -175,8 +173,7 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         autoProceed: false,
         restrictions: { maxFileSize: limits.maxFileBytes, allowedFileTypes: limits.allowedMimeTypes },
       });
-      allUppyRef.current.add(uppy);
-      for (const meta of metas) uppyByClientRef.current.set(meta.clientId, uppy);
+      for (const meta of metas) uppyByClientId.set(meta.clientId, uppy);
 
       let assemblyId: string | null = null;
 
@@ -212,8 +209,14 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         const meta = metas[i];
         const file = files[i];
         if (!meta || !file) continue;
-        filesRef.current.set(meta.clientId, file);
-        uppy.addFile({ id: meta.clientId, name: file.name, type: file.type, data: file, meta: { clientId: meta.clientId } });
+        filesByClientId.set(meta.clientId, file);
+        // NOTE: Uppy's `addFile` ignores any caller-supplied `id` (`#transformFile` always calls
+        // `getSafeFileId`, which regenerates one from name/type/size — verified in
+        // @uppy/core/lib/utils/generateFileID.js). The returned id is the *real* one; `meta` (unlike
+        // `id`) is preserved verbatim, so events are correlated by `file.meta.clientId`, and this
+        // returned id is kept only for `removeFile`/`retryUpload`.
+        const uppyFileId = uppy.addFile({ name: file.name, type: file.type, data: file, meta: { clientId: meta.clientId } });
+        uppyFileIdByClientId.set(meta.clientId, uppyFileId);
       }
 
       uppy.on("complete", (result) => {
@@ -241,8 +244,12 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
               );
             }
           }
-          for (const meta of metas) uppyByClientRef.current.delete(meta.clientId);
-          allUppyRef.current.delete(uppy);
+          for (const meta of metas) {
+            // Only clear an entry this batch still owns — a retry started for one of these
+            // clientIds (spawning a new Uppy instance + a new real file id) may already have
+            // overwritten it, and that newer entry must survive this (older) batch's cleanup.
+            if (uppyByClientId.get(meta.clientId) === uppy) uppyByClientId.delete(meta.clientId);
+          }
           uppy.destroy();
         })();
       });
@@ -300,7 +307,7 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
       const existing = (useComposerStore.getState().attachments[chatKey] ?? EMPTY_ATTACHMENTS).find(
         (a) => a.clientId === clientId,
       );
-      const file = filesRef.current.get(clientId);
+      const file = filesByClientId.get(clientId);
       if (!existing || !file) return;
       updateAttachment(chatKey, clientId, { status: "uploading", progress: 0, error: null });
       const meta: FileMeta = {
@@ -317,9 +324,11 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
 
   const cancelFile = useCallback(
     (clientId: string) => {
-      const uppy = uppyByClientRef.current.get(clientId);
-      uppy?.removeFile(clientId);
-      uppyByClientRef.current.delete(clientId);
+      const uppy = uppyByClientId.get(clientId);
+      const uppyFileId = uppyFileIdByClientId.get(clientId);
+      uppy?.removeFile(uppyFileId ?? clientId);
+      uppyByClientId.delete(clientId);
+      uppyFileIdByClientId.delete(clientId);
       const existing = (useComposerStore.getState().attachments[chatKey] ?? EMPTY_ATTACHMENTS).find(
         (a) => a.clientId === clientId,
       );
@@ -340,8 +349,9 @@ export function useUploader(chatId: string | null, limits: AppLimits): UseUpload
         (a) => a.clientId === clientId,
       );
       revokePreview(existing?.previewUrl ?? null);
-      filesRef.current.delete(clientId);
-      uppyByClientRef.current.delete(clientId);
+      filesByClientId.delete(clientId);
+      uppyByClientId.delete(clientId);
+      uppyFileIdByClientId.delete(clientId);
       removeAttachmentFromStore(chatKey, clientId);
     },
     [chatKey, removeAttachmentFromStore],

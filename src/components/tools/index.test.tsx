@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { LiveToolState, ToolResultBlock, ToolUseBlock } from "@/contracts";
 import { ToolCard, type ToolCardProps } from "./index";
 
@@ -45,8 +45,8 @@ describe("ToolCard", () => {
     expect(screen.getByRole("button", { name: /open cropped image/i })).toBeInTheDocument();
   });
 
-  it("renders a completed gpt_image_2 card with prompt, chips, and an openable image grid", async () => {
-    const onOpenAsset = (await import("vitest")).vi.fn();
+  it("renders a completed gpt_image_2 card with prompt, chips, and an openable image grid", () => {
+    const onOpenAsset = vi.fn();
     renderCard({
       toolUse: toolUse("gpt_image_2", { prompt: "a red fox", size: "1024x1024", quality: "High", background: "Auto", n: 1, output_format: "PNG" }),
       result: completedResult("gpt_image_2", { images: ["https://x.test/1.png"] }),

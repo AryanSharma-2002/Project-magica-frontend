@@ -29,11 +29,16 @@ export function ArtifactPanel({ assets, open, onOpenChange, selectedUrl }: Artif
     return found >= 0 ? found : 0;
   });
   // Track the last `selectedUrl` we synced from, and re-sync during render (not in an effect) when
-  // the caller passes a different one — e.g. a tool card's onOpenAsset(url). This is the React-docs
-  // "adjust state while rendering" pattern: it re-derives `index` for the new prop without an extra
-  // render pass and without a setState-in-effect.
+  // the caller passes a different one — e.g. a tool card's onOpenAsset(url) — or when the panel is
+  // reopened (a user may have arrowed elsewhere last time; reopening should jump back to the asset
+  // the caller asked for). This is the React-docs "adjust state while rendering" pattern: it
+  // re-derives `index` for the new prop without an extra render pass and without a
+  // setState-in-effect.
   const [syncedUrl, setSyncedUrl] = useState<string | null>(selectedUrl ?? null);
-  if ((selectedUrl ?? null) !== syncedUrl) {
+  const [wasOpen, setWasOpen] = useState(open);
+  const justOpened = open && !wasOpen;
+  if (open !== wasOpen) setWasOpen(open);
+  if (justOpened || (selectedUrl ?? null) !== syncedUrl) {
     setSyncedUrl(selectedUrl ?? null);
     const found = selectedUrl ? assets.findIndex((a) => a.url === selectedUrl) : -1;
     if (found >= 0) setIndex(found);
