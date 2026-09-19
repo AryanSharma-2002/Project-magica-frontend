@@ -16,8 +16,9 @@ export const AppConfig = z.object({ limits: AppLimits, models: z.array(ModelInfo
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // ---- chats ----
-export const ListChatsQuery = CursorQuery.extend({ pinned: z.coerce.boolean().optional(), q: z.string().max(200).optional() });
+export const ListChatsQuery = CursorQuery.extend({ pinned: z.stringbool().optional(), q: z.string().max(200).optional() });
 export const ListChatsResponse = Page(Chat);
+export type ListChatsResponse = z.infer<typeof ListChatsResponse>;
 export const CreateChatRequest = z.object({ title: z.string().min(1).max(200).optional() });
 export const UpdateChatRequest = z.object({ title: z.string().min(1).max(200).optional(), pinned: z.boolean().optional() }).refine((v) => v.title !== undefined || v.pinned !== undefined, "Nothing to update");
 export type ListChatsQuery = z.infer<typeof ListChatsQuery>;
@@ -28,6 +29,7 @@ export type UpdateChatRequest = z.infer<typeof UpdateChatRequest>;
 export const ListMessagesQuery = CursorQuery;
 export const ListMessagesResponse = Page(Message);
 export type ListMessagesQuery = z.infer<typeof ListMessagesQuery>;
+export type ListMessagesResponse = z.infer<typeof ListMessagesResponse>;
 
 export const SendMessageRequest = z.object({
   text: z.string().max(20_000),
@@ -49,7 +51,9 @@ export const SendMessageResponse = z.object({
 export type SendMessageResponse = z.infer<typeof SendMessageResponse>;
 
 // ---- runs ----
-export const GetRunResponse = AgentRun;
+/** Run state plus realtime access (null when the run is terminal or not yet dispatched) — one call for reload recovery. */
+export const GetRunResponse = AgentRun.extend({ realtime: RealtimeAccess.nullable() });
+export type GetRunResponse = z.infer<typeof GetRunResponse>;
 export const CancelRunResponse = AgentRun;
 export const RealtimeTokenResponse = RealtimeAccess;
 
@@ -66,6 +70,7 @@ export const FileMeta = z.object({
   sizeBytes: z.number().int().positive(),
   position: z.number().int().nonnegative(),
 });
+export type FileMeta = z.infer<typeof FileMeta>;
 export const CreateAssemblyRequest = z.object({ chatId: Id.optional(), files: z.array(FileMeta).min(1).max(10) });
 export const CreateAssemblyResponse = z.object({
   /** Pass straight to Uppy Transloadit plugin: { params, signature }. params is the exact signed JSON string. */
@@ -87,11 +92,13 @@ export type AttachmentUploadedRequest = z.infer<typeof AttachmentUploadedRequest
 export const ListAttachmentsQuery = CursorQuery.extend({ kind: AttachmentKind.optional(), source: z.enum(["upload", "library", "generated"]).optional() });
 export const ListAttachmentsResponse = Page(Attachment);
 export type ListAttachmentsQuery = z.infer<typeof ListAttachmentsQuery>;
+export type ListAttachmentsResponse = z.infer<typeof ListAttachmentsResponse>;
 
 // ---- credits ----
 export const BalanceResponse = z.object({ microcredits: Microcredits, updatedAt: IsoDate });
 export type BalanceResponse = z.infer<typeof BalanceResponse>;
 export const ListLedgerResponse = Page(LedgerEntry);
+export type ListLedgerResponse = z.infer<typeof ListLedgerResponse>;
 
 // ---- search ----
 export const SearchQuery = CursorQuery.extend({ q: z.string().min(1).max(200) });
@@ -99,6 +106,7 @@ export const SearchHit = z.object({ chatId: Id, chatTitle: z.string(), messageId
 export const SearchResponse = Page(SearchHit);
 export type SearchHit = z.infer<typeof SearchHit>;
 export type SearchQuery = z.infer<typeof SearchQuery>;
+export type SearchResponse = z.infer<typeof SearchResponse>;
 
 // ---- public API (bonus) ----
 export const PublicCompletionRequest = z.object({
