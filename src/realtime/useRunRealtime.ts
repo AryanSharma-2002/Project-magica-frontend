@@ -170,7 +170,10 @@ export function useRunRealtime({ chatId, run, persisted }: UseRunRealtimeInput):
   const parsedMetadata = useMemo(() => {
     const raw = runSubscription.run?.metadata;
     if (!raw) return null;
-    const parsed = RunMetadata.safeParse(raw);
+    // The backend emitter stores the run state under the `run` key (ARCHITECTURE §6); child tasks
+    // may add other keys (e.g. `tool:<invocationId>` progress). Accept a bare object too.
+    const candidate = typeof raw === "object" && raw !== null && "run" in raw ? (raw as { run: unknown }).run : raw;
+    const parsed = RunMetadata.safeParse(candidate);
     return parsed.success ? parsed.data : null;
   }, [runSubscription.run?.metadata]);
 
