@@ -32,7 +32,7 @@ export function ChatList() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-1.5 px-2 py-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-2 py-1">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-8 w-full" />
         ))}
@@ -41,11 +41,11 @@ export function ChatList() {
   }
 
   if (chats.length === 0) {
-    return <p className="px-3 py-2 text-sm text-muted-foreground">No chats yet.</p>;
+    return <p className="min-h-0 flex-1 px-3 py-2 text-sm text-muted-foreground">No chats yet.</p>;
   }
 
   return (
-    <nav aria-label="Chats" className="flex flex-col gap-3 overflow-y-auto px-2 pb-2">
+    <nav aria-label="Chats" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pb-2">
       {pinned.length > 0 ? (
         <div>
           <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Pinned</p>

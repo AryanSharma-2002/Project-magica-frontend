@@ -8,10 +8,35 @@ import { ChatList } from "./chat-list";
 import { CreditsPill } from "./credits-pill";
 import { SearchCommand } from "./search-command";
 
-/** Persistent nav content: new chat, search, chat list, credits, user menu, collapse toggle. */
-export function Sidebar() {
+/**
+ * Persistent nav content: new chat, search, chat list, credits, user menu, collapse toggle.
+ * `collapsed` renders a compact icon rail (desktop only — the mobile Sheet always passes `false`).
+ */
+export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
   const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen);
   const toggleCollapsed = useUiStore((s) => s.toggleSidebarCollapsed);
+
+  if (collapsed) {
+    return (
+      <div className="flex h-full flex-col items-center gap-1.5 py-2">
+        <Button variant="ghost" size="icon" aria-label="Expand sidebar" onClick={toggleCollapsed}>
+          <PanelLeftIcon />
+        </Button>
+        <Button asChild variant="secondary" size="icon" aria-label="New chat">
+          <Link href="/">
+            <PlusIcon />
+          </Link>
+        </Button>
+        <Button variant="ghost" size="icon" aria-label="Search" onClick={() => setCommandPaletteOpen(true)}>
+          <SearchIcon />
+        </Button>
+        <div className="mt-auto pb-1">
+          <UserButton />
+        </div>
+        <SearchCommand />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">

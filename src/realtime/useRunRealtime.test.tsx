@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { API, fixtures } from "@/test/msw/handlers";
 import { createTestQueryClient } from "@/test/query-client";
+import { runsService } from "@/services";
 import { useRunsStore, type ActiveRun } from "@/stores/runs";
 import { useRunRealtime } from "./useRunRealtime";
 
@@ -50,6 +51,7 @@ describe("useRunRealtime fallback", () => {
     useRunsStore.getState().setRun("chat_1", run);
     const client = createTestQueryClient();
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    const getRunSpy = vi.spyOn(runsService, "get");
 
     const { result } = renderHook(() => useRunRealtime({ chatId: "chat_1", run, persisted: [] }), {
       wrapper: wrapperFor(client),
@@ -72,6 +74,8 @@ describe("useRunRealtime fallback", () => {
 
     // The fallback polls GET /runs/:id every 2s; while still running each tick also refreshes messages.
     await waitFor(() => expect(result.current.live.status).toBe("running"));
+    expect(getRunSpy).toHaveBeenCalledWith("run_1", expect.anything());
+    const pollCountWhileRunning = getRunSpy.mock.calls.length;
     const countWhileRunning = invalidateSpy.mock.calls.filter(
       (call) => JSON.stringify(queryKeyOf(call)) === JSON.stringify(["messages", "chat_1"]),
     ).length;
@@ -81,6 +85,8 @@ describe("useRunRealtime fallback", () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
     await waitFor(() => expect(result.current.live.status).toBe("completed"));
+    // runsService.get was polled repeatedly (not a single one-shot fetch).
+    expect(getRunSpy.mock.calls.length).toBeGreaterThan(pollCountWhileRunning);
 
     const messagesInvalidations = invalidateSpy.mock.calls.filter((call) => JSON.stringify(queryKeyOf(call)) === JSON.stringify(["messages", "chat_1"]));
     // Terminal reconciliation adds exactly one more invalidation (its own), not a duplicate from

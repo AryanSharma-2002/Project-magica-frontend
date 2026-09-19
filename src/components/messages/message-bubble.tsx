@@ -61,7 +61,7 @@ export function MessageBubble({ message, live, onRetry, onOpenAsset }: MessageBu
               {blocks.map((block, index) => (
                 <BlockRenderer key={index} block={block} index={index} blocks={blocks} live={live ?? null} onOpenAsset={onOpenAsset} />
               ))}
-              {message.status === "streaming" ? (
+              {live?.status === "running" || message.status === "streaming" ? (
                 <span aria-hidden="true" className="inline-block h-4 w-1.5 animate-pulse bg-current align-text-bottom" />
               ) : null}
             </div>

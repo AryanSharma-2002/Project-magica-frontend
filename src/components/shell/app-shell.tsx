@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className={cn("hidden shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:block")}
         style={{ width: collapsed ? "var(--sidebar-width-collapsed)" : "var(--sidebar-width)" }}
       >
-        <Sidebar />
+        <Sidebar collapsed={collapsed} />
       </aside>
 
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
