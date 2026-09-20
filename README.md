@@ -6,6 +6,8 @@ Design: see [ARCHITECTURE.md](./ARCHITECTURE.md) and the canonical `agent-chat-b
 
 ## Setup
 
+Full run guide for both repos: `agent-chat-backend/RUNBOOK.md`.
+
 ```bash
 corepack enable pnpm
 pnpm install
@@ -13,7 +15,7 @@ cp .env.example .env.local        # Clerk publishable key, backend URL
 pnpm contracts:sync ../agent-chat-backend   # or a git URL + ref
 pnpm dev                          # http://localhost:3000
 pnpm typecheck && pnpm lint && pnpm test
-pnpm test:e2e                     # Playwright (needs backend + Clerk test user)
+pnpm test:e2e                     # not wired yet: no Playwright config (see agent-chat-backend/RUNBOOK.md §10)
 ```
 
 ## Contracts
