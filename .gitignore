@@ -45,3 +45,6 @@ next-env.d.ts
 coverage
 playwright-report
 test-results
+
+# playwright auth state
+e2e/.auth

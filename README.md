@@ -17,7 +17,7 @@ cp .env.example .env.local        # Clerk publishable key, backend URL
 pnpm contracts:sync ../agent-chat-backend   # or a git URL + ref
 pnpm dev                          # http://localhost:3000
 pnpm typecheck && pnpm lint && pnpm test
-pnpm test:e2e                     # not wired yet: no Playwright config (see agent-chat-backend/RUNBOOK.md §10)
+E2E_CLERK_USER_EMAIL=<reviewer email> pnpm test:e2e   # Playwright smoke against a running stack (see e2e/README.md)
 ```
 
 ## Contracts
