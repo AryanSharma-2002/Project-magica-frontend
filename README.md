@@ -2,6 +2,8 @@
 
 Next.js 16 App Router client for the Agent Chat work trial. Pairs with **agent-chat-backend** (REST `/api/v1`, Trigger.dev realtime). Stack: TypeScript strict, Clerk, TanStack Query, Zustand, Zod (vendored contracts), shadcn/ui + Tailwind 4, Uppy + Transloadit (tus), Trigger.dev React hooks, Vitest + RTL + MSW + Playwright.
 
+Live: `https://agent-chat-frontend-pi.vercel.app` (Clerk sign-in), talking to the API at `https://agent-chat-backend-tan.vercel.app`.
+
 Design: see [ARCHITECTURE.md](./ARCHITECTURE.md) and the canonical `agent-chat-backend/ARCHITECTURE.md`.
 
 ## Setup
