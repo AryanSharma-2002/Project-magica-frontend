@@ -51,22 +51,22 @@
 
 :root {
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --foreground: #1b1b1b;
+  --card: #fafafa;
+  --card-foreground: #1b1b1b;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --popover-foreground: #1b1b1b;
+  --primary: #1b1b1b;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: #fafafa;
+  --secondary-foreground: #1b1b1b;
+  --muted: #f4f4f4;
+  --muted-foreground: #585858;
+  --accent: #f4f4f4;
+  --accent-foreground: #1b1b1b;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: #ededed;
+  --input: #ededed;
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -74,22 +74,29 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1b1b1b;
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-accent: #f4f4f4;
+  --sidebar-accent-foreground: #1b1b1b;
+  --sidebar-border: #ededed;
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Layout tokens (F1): components read these instead of hardcoding spacing, so the fidelity
      pass against app.magica.com is a token change, not a rewrite. */
-  --sidebar-width: 17.5rem;
+  /* Measured on app.magica.com at a 1470px viewport (FIDELITY.md): 248px sidebar card, 52px top
+     bar, 900px composer, 868px message column, 448px user bubble, roughly half-width artifact panel. */
+  --sidebar-width: 15.5rem;
   --sidebar-width-collapsed: 4rem;
-  --composer-max-width: 48rem;
-  --message-max-width: 42rem;
-  --artifact-panel-width: 24rem;
+  --topbar-height: 3.25rem;
+  --composer-max-width: 56.25rem;
+  --message-max-width: 54.25rem;
+  --user-bubble-max-width: 28rem;
+  --artifact-panel-width: 36rem;
+  /* Reference greys not covered by shadcn's palette. */
+  --text-subtle: #777777;
+  --surface-hover: #f4f4f4;
 }
 
 .dark {
