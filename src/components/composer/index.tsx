@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Images, Loader2, Paperclip, Route, Send, SquareIcon } from "lucide-react";
+import { ArrowUp, Images, Loader2, Paperclip, Route, SquareIcon } from "lucide-react";
 import type { AppLimits, Attachment, ModelInfo, RunStatus } from "@/contracts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { composerKey, useComposerStore } from "@/stores/composer";
 import { AttachmentChip } from "./AttachmentChip";
 import { MediaLibraryPicker } from "./MediaLibraryPicker";
-import { StatusPill } from "./StatusPill";
 import { useUploader } from "./useUploader";
 
 /**
@@ -23,17 +22,23 @@ export type ComposerProps = {
   /** null = new chat; the shell creates the chat on first send. */
   chatId: string | null;
   limits: AppLimits;
+  /** The top bar (f3-shell) owns model selection now; kept for prop compatibility with chat-screen.tsx. */
   models: ModelInfo[];
   /** Status of the active run for send/stop/interrupt states; null when idle. */
   runStatus: RunStatus | null;
   disabled?: boolean;
   onSend: (input: ComposerSendInput) => Promise<void>;
   onStop: () => Promise<void>;
+  /** FIDELITY.md "Conversation": the empty (new-chat) state passes "Assign a task or ask anything...". */
+  placeholder?: string;
 };
 
-const MAX_TEXTAREA_LINES = 8;
-const LINE_HEIGHT_PX = 20;
-const TEXTAREA_MAX_HEIGHT_PX = MAX_TEXTAREA_LINES * LINE_HEIGHT_PX + 16;
+/** The textarea auto-grows up to 70% of the viewport height (FIDELITY.md "Conversation"). */
+const TEXTAREA_MAX_VH_RATIO = 0.7;
+const DEFAULT_TEXTAREA_MAX_HEIGHT_PX = 400;
+
+/** Character counter only shows above 90% of the message limit (FIDELITY.md "Conversation"). */
+const COUNTER_THRESHOLD_RATIO = 0.9;
 
 type ComposerMode = "idle" | "active" | "waiting" | "stopping";
 
@@ -44,7 +49,7 @@ function modeFor(runStatus: RunStatus | null): ComposerMode {
   return "idle";
 }
 
-export function Composer({ chatId, limits, models, runStatus, disabled = false, onSend, onStop }: ComposerProps) {
+export function Composer({ chatId, limits, runStatus, disabled = false, onSend, onStop, placeholder }: ComposerProps) {
   const chatKey = composerKey(chatId);
   const draft = useComposerStore((s) => s.drafts[chatKey] ?? "");
   const setDraft = useComposerStore((s) => s.setDraft);
@@ -74,6 +79,7 @@ export function Composer({ chatId, limits, models, runStatus, disabled = false, 
   const mode: ComposerMode = serverMode === "idle" ? "idle" : stopping ? "stopping" : serverMode;
 
   const overLimit = draft.length > limits.maxMessageChars;
+  const nearLimit = draft.length >= limits.maxMessageChars * COUNTER_THRESHOLD_RATIO;
   const readyAttachmentIds = sortedAttachments
     .filter((a): a is typeof a & { attachmentId: string } => a.status === "ready" && a.attachmentId !== null)
     .map((a) => a.attachmentId);
@@ -83,8 +89,9 @@ export function Composer({ chatId, limits, models, runStatus, disabled = false, 
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
+    const maxHeight = typeof window !== "undefined" ? window.innerHeight * TEXTAREA_MAX_VH_RATIO : DEFAULT_TEXTAREA_MAX_HEIGHT_PX;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
   }, [draft]);
 
   const handleSend = useCallback(async () => {
@@ -168,14 +175,12 @@ export function Composer({ chatId, limits, models, runStatus, disabled = false, 
     return "";
   }, [sortedAttachments]);
 
+  const describedBy = [nearLimit ? counterId : null, sendError ? errorId : null].filter(Boolean).join(" ") || undefined;
+  const isRunActive = mode === "active" || mode === "stopping";
+
   return (
     <TooltipProvider>
-      <div
-        className="border-t bg-background p-3"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
-        data-testid="composer-root"
-      >
+      <div className="px-4 pb-4" onDragOver={(e) => e.preventDefault()} onDrop={handleDrop} data-testid="composer-root">
         <div aria-live="polite" className="sr-only">
           {uploadStatusMessage}
         </div>
@@ -201,111 +206,129 @@ export function Composer({ chatId, limits, models, runStatus, disabled = false, 
           </Alert>
         )}
 
-        {sortedAttachments.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {sortedAttachments.map((a) => (
-              <AttachmentChip key={a.clientId} attachment={a} onRemove={uploader.removeAttachment} onRetry={uploader.retryFile} />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col gap-3 rounded-[24px] border border-border bg-linear-to-b from-card to-white p-4 pt-4 pb-3">
+          {sortedAttachments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {sortedAttachments.map((a) => (
+                <AttachmentChip key={a.clientId} attachment={a} onRemove={uploader.removeAttachment} onRetry={uploader.retryFile} />
+              ))}
+            </div>
+          )}
 
-        <div className="flex items-end gap-2">
-          <label htmlFor={textareaId} className="sr-only">
-            Message
-          </label>
-          <Textarea
-            ref={textareaRef}
-            id={textareaId}
-            value={draft}
-            onChange={(e) => setDraft(chatKey, e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="Send a message…"
-            disabled={disabled}
-            className="flex-1 resize-none overflow-y-auto"
-            style={{ maxHeight: TEXTAREA_MAX_HEIGHT_PX }}
-            aria-describedby={`${counterId}${sendError ? ` ${errorId}` : ""}`}
-            aria-invalid={overLimit || undefined}
-          />
-        </div>
-
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              hidden
-              accept={limits.allowedMimeTypes.join(",")}
-              onChange={(e) => {
-                addFilesFromList(e.target.files);
-                e.target.value = "";
-              }}
-              aria-label="Attach files"
+          <div className="flex items-end gap-2">
+            <label htmlFor={textareaId} className="sr-only">
+              Message
+            </label>
+            <Textarea
+              ref={textareaRef}
+              id={textareaId}
+              value={draft}
+              onChange={(e) => setDraft(chatKey, e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholder ?? "Send a message..."}
+              disabled={disabled}
+              className="max-h-[70vh] min-h-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-0 py-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
+              aria-describedby={describedBy}
+              aria-invalid={overLimit || undefined}
             />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  aria-label="Attach files"
-                >
-                  <Paperclip className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Attach files</TooltipContent>
-            </Tooltip>
-
-            <MediaLibraryPicker
-              trigger={
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Choose from your media">
-                  <Images className="size-4" />
-                </Button>
-              }
-              onSelect={handleLibrarySelect}
-            />
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant={planMode ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  aria-pressed={planMode}
-                  aria-label="Plan mode"
-                  onClick={() => setPlanMode(!planMode)}
-                >
-                  <Route className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Plan mode: ask for your approval before tools run.</TooltipContent>
-            </Tooltip>
-
-            <StatusPill model={models[0]} />
           </div>
 
-          <div className="flex items-center gap-2">
-            <span id={counterId} className={cn("text-xs tabular-nums text-muted-foreground", overLimit && "font-medium text-destructive")}>
-              {draft.length}/{limits.maxMessageChars}
-            </span>
-            {mode === "waiting" && (
-              <span role="status" className="text-xs text-muted-foreground">
-                Waiting for your decision
-              </span>
-            )}
-            {mode === "active" || mode === "stopping" ? (
-              <Button type="button" variant="destructive" onClick={() => void handleStop()} disabled={mode === "stopping"}>
-                {mode === "stopping" ? <Loader2 className="size-4 animate-spin" /> : <SquareIcon className="size-4" />}
-                {mode === "stopping" ? "Stopping…" : "Stop"}
-              </Button>
-            ) : (
-              <Button type="button" onClick={() => void handleSend()} disabled={!canSend}>
-                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                Send
-              </Button>
-            )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                accept={limits.allowedMimeTypes.join(",")}
+                onChange={(e) => {
+                  addFilesFromList(e.target.files);
+                  e.target.value = "";
+                }}
+                aria-label="Attach files"
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full text-muted-foreground"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Attach files"
+                  >
+                    <Paperclip className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Attach files. Community plan: uploads may be watermarked or trimmed.</TooltipContent>
+              </Tooltip>
+
+              <MediaLibraryPicker
+                trigger={
+                  <Button type="button" variant="ghost" size="icon" className="rounded-full text-muted-foreground" aria-label="Choose from your media">
+                    <Images className="size-4" />
+                  </Button>
+                }
+                onSelect={handleLibrarySelect}
+              />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-pressed={planMode}
+                    aria-label="Plan mode"
+                    onClick={() => setPlanMode(!planMode)}
+                    className={cn("rounded-full", planMode ? "bg-muted text-foreground" : "text-muted-foreground")}
+                  >
+                    <Route className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Plan mode: ask for your approval before tools run.</TooltipContent>
+              </Tooltip>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {nearLimit && (
+                <span id={counterId} className={cn("text-xs tabular-nums text-muted-foreground", overLimit && "font-medium text-destructive")}>
+                  {draft.length}/{limits.maxMessageChars}
+                </span>
+              )}
+              {mode === "waiting" && (
+                <span role="status" className="text-xs text-muted-foreground">
+                  Waiting for your decision
+                </span>
+              )}
+              {isRunActive ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  className="rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-100"
+                  aria-label={mode === "stopping" ? "Stopping…" : "Stop"}
+                  onClick={() => void handleStop()}
+                  disabled={mode === "stopping"}
+                >
+                  {mode === "stopping" ? <Loader2 className="size-4 animate-spin" /> : <SquareIcon className="size-3 fill-current" />}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label="Send"
+                  className={cn(
+                    "rounded-full disabled:opacity-100",
+                    canSend ? "bg-foreground text-background hover:bg-foreground/90" : "bg-card text-muted-foreground",
+                  )}
+                  onClick={() => void handleSend()}
+                  disabled={!canSend}
+                >
+                  {sending ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -314,9 +337,7 @@ export function Composer({ chatId, limits, models, runStatus, disabled = false, 
             Your message is {draft.length - limits.maxMessageChars} characters over the {limits.maxMessageChars} limit.
           </p>
         )}
-        <p className="mt-1 text-[11px] text-muted-foreground">Community plan: uploads may be watermarked or trimmed.</p>
       </div>
     </TooltipProvider>
   );
 }
-

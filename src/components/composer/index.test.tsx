@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DEFAULT_LIMITS, type ModelInfo } from "@/contracts";
@@ -70,6 +70,18 @@ describe("Composer", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it("shows the character counter only once the draft is above 90% of the limit", () => {
+    const limits = { ...DEFAULT_LIMITS, maxMessageChars: 100 };
+    renderComposer({ limits });
+    const textarea = screen.getByRole("textbox", { name: /message/i });
+
+    fireEvent.change(textarea, { target: { value: "a".repeat(85) } });
+    expect(screen.queryByText("85/100")).not.toBeInTheDocument();
+
+    fireEvent.change(textarea, { target: { value: "a".repeat(91) } });
+    expect(screen.getByText("91/100")).toBeInTheDocument();
+  });
+
   it("shows Stop while a run is active and calls onStop", async () => {
     const user = userEvent.setup();
     const { onStop } = renderComposer({ runStatus: "running" });
@@ -78,6 +90,28 @@ describe("Composer", () => {
     const stopButton = screen.getByRole("button", { name: /^stop$/i });
     await user.click(stopButton);
     await waitFor(() => expect(onStop).toHaveBeenCalledTimes(1));
+  });
+
+  it("swaps the send/stop control as the run status changes", () => {
+    const { rerender, props } = renderComposer({ runStatus: null });
+    expect(screen.getByRole("button", { name: /^send$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^stop$/i })).not.toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <Composer {...props} runStatus="running" />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /^stop$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^send$/i })).not.toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <Composer {...props} runStatus={null} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("button", { name: /^send$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^stop$/i })).not.toBeInTheDocument();
   });
 
   it("disables send while waiting for a decision", async () => {

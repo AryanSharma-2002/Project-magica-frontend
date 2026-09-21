@@ -75,7 +75,7 @@ function WaitpointOverlayInner({ waitpoint, onResolve, busy = false }: Waitpoint
   return (
     <Dialog open>
       <DialogContent
-        className="sm:max-w-md"
+        className="rounded-[10px] border border-border bg-background p-6 shadow-sm ring-0 sm:max-w-md"
         showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {

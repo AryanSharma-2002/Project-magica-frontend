@@ -22,10 +22,12 @@ export type BlockRendererProps = {
   blocks: ContentBlock[];
   live: LiveView | null;
   onOpenAsset: (url: string) => void;
+  /** "user" renders compact 14px/20px prose (the bubble); "assistant" (default) is 16px/28px. */
+  variant?: "user" | "assistant";
 };
 
 export const blockRenderers: Record<ContentBlockType, ComponentType<BlockRendererProps>> = {
-  text: ({ block }) => (block.type === "text" ? <TextBlockView block={block} /> : null),
+  text: ({ block, variant }) => (block.type === "text" ? <TextBlockView block={block} variant={variant} /> : null),
   thinking: ({ block }) => (block.type === "thinking" ? <ThinkingBlockView block={block} /> : null),
   reasoning: ({ block }) => (block.type === "reasoning" ? <ReasoningBlockView block={block} /> : null),
   tool_use: (props) => <ToolUseBlockView {...props} />,

@@ -37,7 +37,7 @@ export function ApprovalRenderer({ prompt, submit, busy, countdownLabel, expired
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{prompt.title}</DialogTitle>
+        <DialogTitle className="text-base font-semibold">{prompt.title}</DialogTitle>
         {prompt.description && <DialogDescription>{prompt.description}</DialogDescription>}
       </DialogHeader>
       <div className="space-y-2 text-sm">
@@ -53,11 +53,11 @@ export function ApprovalRenderer({ prompt, submit, busy, countdownLabel, expired
         </p>
         <CountdownRow label={countdownLabel} expired={expired} />
       </div>
-      <DialogFooter>
+      <DialogFooter className="-mx-0 -mb-0 rounded-none border-t-0 bg-transparent p-0 pt-2">
         <Button type="button" variant="outline" disabled={busy || expired} onClick={() => submit({ type: "approval", approved: false })}>
           Decline
         </Button>
-        <Button type="button" disabled={busy || expired} onClick={() => submit({ type: "approval", approved: true })}>
+        <Button type="button" className="rounded-full" disabled={busy || expired} onClick={() => submit({ type: "approval", approved: true })}>
           {busy && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
           Approve
         </Button>
@@ -80,7 +80,7 @@ export function OptionsRenderer({ prompt, submit, busy, countdownLabel, expired 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{prompt.title}</DialogTitle>
+        <DialogTitle className="text-base font-semibold">{prompt.title}</DialogTitle>
         {prompt.description && <DialogDescription>{prompt.description}</DialogDescription>}
       </DialogHeader>
       <fieldset className="space-y-2">
@@ -106,9 +106,10 @@ export function OptionsRenderer({ prompt, submit, busy, countdownLabel, expired 
         })}
       </fieldset>
       <CountdownRow label={countdownLabel} expired={expired} />
-      <DialogFooter>
+      <DialogFooter className="-mx-0 -mb-0 rounded-none border-t-0 bg-transparent p-0 pt-2">
         <Button
           type="button"
+          className="rounded-full"
           disabled={busy || expired || selected.length === 0}
           onClick={() => submit({ type: "options", selected })}
         >
@@ -128,7 +129,7 @@ export function PlanRenderer({ prompt, submit, busy, countdownLabel, expired }: 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{prompt.title}</DialogTitle>
+        <DialogTitle className="text-base font-semibold">{prompt.title}</DialogTitle>
       </DialogHeader>
       <ol className="list-decimal space-y-1.5 pl-4 text-sm">
         {prompt.steps.map((step) => (
@@ -147,7 +148,7 @@ export function PlanRenderer({ prompt, submit, busy, countdownLabel, expired }: 
         </div>
       )}
       <CountdownRow label={countdownLabel} expired={expired} />
-      <DialogFooter>
+      <DialogFooter className="-mx-0 -mb-0 rounded-none border-t-0 bg-transparent p-0 pt-2">
         {showFeedback ? (
           <>
             <Button type="button" variant="outline" disabled={busy} onClick={() => setShowFeedback(false)}>
@@ -156,6 +157,7 @@ export function PlanRenderer({ prompt, submit, busy, countdownLabel, expired }: 
             <Button
               type="button"
               variant="destructive"
+              className="rounded-full"
               disabled={busy || expired}
               onClick={() => submit({ type: "plan", approved: false, feedback: feedback.trim() || undefined })}
             >
@@ -168,7 +170,7 @@ export function PlanRenderer({ prompt, submit, busy, countdownLabel, expired }: 
             <Button type="button" variant="outline" disabled={busy || expired} onClick={() => setShowFeedback(true)}>
               Request changes
             </Button>
-            <Button type="button" disabled={busy || expired} onClick={() => submit({ type: "plan", approved: true })}>
+            <Button type="button" className="rounded-full" disabled={busy || expired} onClick={() => submit({ type: "plan", approved: true })}>
               {busy && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
               Approve plan
             </Button>
@@ -186,7 +188,7 @@ export function CreditRenderer({ prompt, submit, busy, countdownLabel, expired }
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{prompt.title}</DialogTitle>
+        <DialogTitle className="text-base font-semibold">{prompt.title}</DialogTitle>
       </DialogHeader>
       <div className="space-y-1 text-sm">
         <p>
@@ -198,11 +200,11 @@ export function CreditRenderer({ prompt, submit, busy, countdownLabel, expired }
         {insufficient && <p className="text-xs text-destructive">You don&apos;t have enough credits to proceed.</p>}
       </div>
       <CountdownRow label={countdownLabel} expired={expired} />
-      <DialogFooter>
+      <DialogFooter className="-mx-0 -mb-0 rounded-none border-t-0 bg-transparent p-0 pt-2">
         <Button type="button" variant="outline" disabled={busy} onClick={() => submit({ type: "credit", proceed: false })}>
           Cancel
         </Button>
-        <Button type="button" disabled={busy || expired || insufficient} onClick={() => submit({ type: "credit", proceed: true })}>
+        <Button type="button" className="rounded-full" disabled={busy || expired || insufficient} onClick={() => submit({ type: "credit", proceed: true })}>
           {busy && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
           Proceed
         </Button>

@@ -58,7 +58,7 @@ describe("MessageList", () => {
     expect(onRetry).toHaveBeenCalledWith(messages[2]);
 
     expect(screen.getByText("partial output")).toBeInTheDocument();
-    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    expect(screen.getByText("Response cancelled.")).toBeInTheDocument();
 
     const failedBubble = document.querySelector('[data-message-id="u2"]');
     expect(failedBubble).toHaveAttribute("data-status", "failed");

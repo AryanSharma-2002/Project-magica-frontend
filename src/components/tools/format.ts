@@ -16,6 +16,33 @@ export function formatDuration(ms: number): string {
   return `${minutes}m ${remainderSeconds}s`;
 }
 
+function truncate(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/**
+ * Short input summary for a step row (messages/step-group.tsx) — a compact one-liner, not the
+ * full per-tool card summary. Tolerates `input: null` (live-synthesized tool_use blocks haven't
+ * been checkpointed yet, ARCHITECTURE §6).
+ */
+export function summarizeToolInput(toolName: string, input: unknown): string | null {
+  if (input == null || typeof input !== "object") return null;
+  const record = input as Record<string, unknown>;
+  switch (toolName) {
+    case "crop_image":
+      return "Crop";
+    case "gpt_image_2":
+      return typeof record.prompt === "string" ? truncate(record.prompt, 60) : null;
+    case "merge_videos":
+      return Array.isArray(record.video_urls) ? `${record.video_urls.length} clip${record.video_urls.length === 1 ? "" : "s"}` : null;
+    case "load_skill":
+    case "read_skill_asset":
+      return typeof record.name === "string" ? record.name : null;
+    default:
+      return null;
+  }
+}
+
 /** mm:ss (or "Expired") countdown label from an ISO expiry timestamp. */
 export function formatCountdown(expiresAt: string, now: number = Date.now()): { label: string; expired: boolean } {
   const remainingMs = new Date(expiresAt).getTime() - now;
