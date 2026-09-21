@@ -113,6 +113,8 @@ export function ChatScreen({ chatId }: { chatId: string | null }) {
       disabled={sendMessage.isPending || createChat.isPending}
       onSend={handleSend}
       onStop={handleStop}
+      // FIDELITY.md "Empty state": the reference composer reads differently before the first message.
+      {...(showEmptyState ? { placeholder: "Assign a task or ask anything..." } : {})}
     />
   );
 
