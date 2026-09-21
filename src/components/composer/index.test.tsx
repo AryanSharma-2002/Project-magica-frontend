@@ -92,6 +92,16 @@ describe("Composer", () => {
     await waitFor(() => expect(onStop).toHaveBeenCalledTimes(1));
   });
 
+  it("stops the run on Escape while active (icon-only Stop control keeps this behaviour)", async () => {
+    const user = userEvent.setup();
+    const { onStop } = renderComposer({ runStatus: "running" });
+    const textarea = screen.getByRole("textbox", { name: /message/i });
+
+    textarea.focus();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(onStop).toHaveBeenCalledTimes(1));
+  });
+
   it("swaps the send/stop control as the run status changes", () => {
     const { rerender, props } = renderComposer({ runStatus: null });
     expect(screen.getByRole("button", { name: /^send$/i })).toBeInTheDocument();
