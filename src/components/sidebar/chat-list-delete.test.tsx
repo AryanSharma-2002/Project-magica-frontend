@@ -42,11 +42,11 @@ describe("ChatList delete", () => {
     await user.click(screen.getByRole("button", { name: /actions for trip planning/i }));
     await user.click(await screen.findByText("Delete"));
 
-    expect(await screen.findByText("Delete this chat?")).toBeInTheDocument();
+    expect(await screen.findByText("Delete this task?")).toBeInTheDocument();
     expect(deleteCalled).toBe(false);
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.queryByText("Delete this chat?")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Delete this task?")).not.toBeInTheDocument());
     expect(deleteCalled).toBe(false);
   });
 });

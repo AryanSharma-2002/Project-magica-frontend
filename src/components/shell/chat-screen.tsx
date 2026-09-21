@@ -14,17 +14,7 @@ import { MessageList } from "@/components/messages";
 import { Composer, type ComposerSendInput } from "@/components/composer";
 import { WaitpointOverlay } from "@/components/waitpoints";
 import { ArtifactPanel } from "@/components/artifacts";
-
-function EmptyState() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-      <h1 className="text-2xl font-semibold">What should we build today?</h1>
-      <p className="max-w-sm text-sm text-muted-foreground">
-        Ask the agent to generate an image, crop a photo, merge videos, or just chat.
-      </p>
-    </div>
-  );
-}
+import { EmptyState } from "./empty-state";
 
 function isLiveMessage(m: Message): boolean {
   return m.role === "assistant" && (m.status === "pending" || m.status === "streaming");
@@ -114,41 +104,47 @@ export function ChatScreen({ chatId }: { chatId: string | null }) {
 
   const showEmptyState = messages.length === 0 && !isFetchingOlder;
 
+  const composer = (
+    <Composer
+      chatId={chatId}
+      limits={config?.limits ?? DEFAULT_LIMITS}
+      models={config?.models ?? []}
+      runStatus={live.status}
+      disabled={sendMessage.isPending || createChat.isPending}
+      onSend={handleSend}
+      onStop={handleStop}
+    />
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {showEmptyState ? (
-          <EmptyState />
+          // The composer renders inline within the centered empty-state column (FIDELITY.md
+          // "Empty state") instead of pinned to the bottom of the viewport.
+          <EmptyState chatId={chatId}>{composer}</EmptyState>
         ) : (
-          <MessageList
-            messages={messages}
-            liveAssistantMessageId={liveAssistantMessageId}
-            live={liveAssistantMessageId ? live : null}
-            hasOlder={hasOlder}
-            isFetchingOlder={isFetchingOlder}
-            fetchOlder={fetchOlder}
-            onRetry={handleRetry}
-            onOpenAsset={openArtifact}
-          />
+          <>
+            <MessageList
+              messages={messages}
+              liveAssistantMessageId={liveAssistantMessageId}
+              live={liveAssistantMessageId ? live : null}
+              hasOlder={hasOlder}
+              isFetchingOlder={isFetchingOlder}
+              fetchOlder={fetchOlder}
+              onRetry={handleRetry}
+              onOpenAsset={openArtifact}
+            />
+
+            {isWaiting && waitpoint ? (
+              <div className="border-t border-border p-4">
+                <WaitpointOverlay waitpoint={waitpoint} onResolve={completeWaitpoint} busy={waitpointRun.isFetching} />
+              </div>
+            ) : null}
+
+            <div className="mx-auto w-full max-w-(--composer-max-width)">{composer}</div>
+          </>
         )}
-
-        {isWaiting && waitpoint ? (
-          <div className="border-t border-border p-4">
-            <WaitpointOverlay waitpoint={waitpoint} onResolve={completeWaitpoint} busy={waitpointRun.isFetching} />
-          </div>
-        ) : null}
-
-        <div className="mx-auto w-full max-w-(--composer-max-width)">
-          <Composer
-            chatId={chatId}
-            limits={config?.limits ?? DEFAULT_LIMITS}
-            models={config?.models ?? []}
-            runStatus={live.status}
-            disabled={sendMessage.isPending || createChat.isPending}
-            onSend={handleSend}
-            onStop={handleStop}
-          />
-        </div>
       </div>
 
       <ArtifactPanel assets={assets} open={artifactOpen} onOpenChange={setArtifactOpen} selectedUrl={selectedAssetUrl} />

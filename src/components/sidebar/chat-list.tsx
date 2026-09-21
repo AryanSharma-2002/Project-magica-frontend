@@ -5,7 +5,9 @@ import { useChats } from "@/queries/chats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatListItem } from "./chat-list-item";
 
-function activeChatId(pathname: string): string | null {
+/** Exported so `SidebarNav` (the Library entry point) can target the composer draft for the
+ * chat currently in view without duplicating this regex. */
+export function activeChatId(pathname: string): string | null {
   const match = /^\/chat\/([^/]+)/.exec(pathname);
   return match?.[1] ?? null;
 }
@@ -32,20 +34,20 @@ export function ChatList() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-2 py-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 py-1">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-8 w-full" />
+          <Skeleton key={i} className="h-(--row-height) w-full rounded-[10px]" />
         ))}
       </div>
     );
   }
 
   if (chats.length === 0) {
-    return <p className="min-h-0 flex-1 px-3 py-2 text-sm text-muted-foreground">No chats yet.</p>;
+    return <p className="min-h-0 flex-1 px-4 py-2 text-sm text-muted-foreground">No tasks yet.</p>;
   }
 
   return (
-    <nav aria-label="Chats" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pb-2">
+    <nav aria-label="Recent tasks" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pb-2">
       {pinned.length > 0 ? (
         <div>
           <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">Pinned</p>
