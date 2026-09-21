@@ -78,8 +78,13 @@ function AssistantMessage({ message, live, onRetry, onOpenAsset }: MessageBubble
   const isFailed = message.status === "failed";
   const isCancelled = message.status === "cancelled";
   const isPending = message.status === "pending" && blocks.length === 0;
-  const isActive = !!live?.status && !TERMINAL_RUN_STATUS_SET.has(live.status);
-  const isStreamingText = isActive && live?.status === "running";
+  // Broader than just `live.status`: on the first frame(s) of a run `useChatRun` may not have
+  // attached live metadata yet (or `live.status` is still null), but `message.status` already
+  // says pending/streaming — the step header must read "Working…" from that moment, not
+  // "Completed N steps" before anything has actually finished.
+  const isActive =
+    (!!live?.status && !TERMINAL_RUN_STATUS_SET.has(live.status)) || message.status === "pending" || message.status === "streaming";
+  const isStreamingText = live?.status === "running" || message.status === "streaming";
 
   const toolUseBlocks = blocks.filter((b): b is ToolUseBlock => b.type === "tool_use");
   const proseBlocks = blocks.filter(isProseBlock);
