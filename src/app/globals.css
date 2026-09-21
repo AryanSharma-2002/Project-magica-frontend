@@ -97,6 +97,11 @@
   /* Reference greys not covered by shadcn's palette. */
   --text-subtle: #777777;
   --surface-hover: #f4f4f4;
+
+  /* f3-shell additions: repeated exact measurements from FIDELITY.md so the shell reads them
+     instead of hardcoding pixel values in every component. */
+  --sidebar-inset: 0.5rem; /* 8px card inset (top/left/bottom) around the sidebar card. */
+  --row-height: 2.125rem; /* 34px: nav rows, chat list rows, user-card content. */
 }
 
 .dark {
@@ -138,7 +143,9 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* Tokens: Geist at 14px/20px (text-sm) is the closest match to the reference's 14px/20px body
+       copy — see FIDELITY.md "Tokens". */
+    @apply bg-background text-foreground text-sm;
   }
   html {
     @apply font-sans;

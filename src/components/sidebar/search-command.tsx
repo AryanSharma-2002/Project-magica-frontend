@@ -36,18 +36,18 @@ export function SearchCommand() {
   const hits = data?.items ?? [];
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search your chats">
+    <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search your tasks">
       <Command shouldFilter={false}>
-        <CommandInput placeholder="Search chats and messages…" value={query} onValueChange={setQuery} />
+        <CommandInput placeholder="Search tasks and messages…" value={query} onValueChange={setQuery} />
         <CommandList>
           {query.trim().length === 0 ? (
-            <CommandEmpty>Type to search your chats.</CommandEmpty>
+            <CommandEmpty>Type to search your tasks.</CommandEmpty>
           ) : isFetching && hits.length === 0 ? (
             <CommandEmpty>Searching…</CommandEmpty>
           ) : hits.length === 0 ? (
             <CommandEmpty>No results.</CommandEmpty>
           ) : (
-            <CommandGroup heading="Chats">
+            <CommandGroup heading="Tasks">
               {hits.map((hit) => (
                 <CommandItem
                   key={`${hit.chatId}:${hit.messageId ?? "title"}`}
@@ -58,7 +58,7 @@ export function SearchCommand() {
                 >
                   <MessageSquareIcon />
                   <div className="flex min-w-0 flex-col">
-                    <span className="truncate font-medium">{hit.chatTitle || "New chat"}</span>
+                    <span className="truncate font-medium">{hit.chatTitle || "New task"}</span>
                     {hit.snippet ? <span className="truncate text-xs text-muted-foreground">{hit.snippet}</span> : null}
                   </div>
                 </CommandItem>

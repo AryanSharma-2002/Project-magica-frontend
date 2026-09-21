@@ -64,21 +64,26 @@ export function ChatListItem({ chat, active }: { chat: Chat; active: boolean }) 
   }
 
   return (
-    <div className={cn("group/item relative flex items-center rounded-md", active ? "bg-accent" : "hover:bg-accent/60")}>
+    <div
+      className={cn(
+        "group/item relative flex h-(--row-height) items-center rounded-[10px]",
+        active ? "bg-[var(--surface-hover)]" : "hover:bg-[var(--surface-hover)]",
+      )}
+    >
       <Link
         href={`/chat/${chat.id}`}
         aria-current={active ? "page" : undefined}
-        className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm"
+        className="min-w-0 flex-1 truncate px-2 text-sm"
         title={chat.title}
       >
-        {chat.title || "New chat"}
+        {chat.title || "New task"}
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            aria-label={`Actions for ${chat.title || "New chat"}`}
+            aria-label={`Actions for ${chat.title || "New task"}`}
             className="mr-1 size-7 shrink-0 opacity-0 focus-visible:opacity-100 group-hover/item:opacity-100"
           >
             <MoreHorizontalIcon className="size-4" />
@@ -106,9 +111,9 @@ export function ChatListItem({ chat, active }: { chat: Chat; active: boolean }) 
       <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this chat?</DialogTitle>
+            <DialogTitle>Delete this task?</DialogTitle>
             <DialogDescription>
-              &ldquo;{chat.title || "New chat"}&rdquo; and its messages will be removed. This can&apos;t be undone.
+              &ldquo;{chat.title || "New task"}&rdquo; and its messages will be removed. This can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

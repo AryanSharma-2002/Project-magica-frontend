@@ -41,7 +41,7 @@ describe("SearchCommand", () => {
     const user = userEvent.setup({ delay: null });
     renderSearch();
 
-    const input = await screen.findByPlaceholderText(/search chats and messages/i);
+    const input = await screen.findByPlaceholderText(/search tasks and messages/i);
     await user.type(input, "vacation");
 
     const hit = await screen.findByText("Vacation photos", {}, { timeout: 2000 });
