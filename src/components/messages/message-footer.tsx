@@ -4,7 +4,7 @@ import type { ContentBlock, Message, UsageBlock } from "@/contracts";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { copyMessage } from "./copy-message";
-import { formatCredits } from "./format-credits";
+import { formatCredits } from "@/lib/format";
 import { formatMessageTime } from "./format-time";
 
 const TERMINAL_MESSAGE_STATUSES = new Set<Message["status"]>(["completed", "failed", "cancelled"]);
